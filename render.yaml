@@ -1,0 +1,18 @@
+services:
+  - type: web
+    name: inv-shalux
+    env: node
+    plan: free
+    buildCommand: npm install && npm run build
+    startCommand: npm run start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: SPREADSHEET_ID
+        value: 129v_Lw-mBELjpjtVE0HT_DOgzJTid4_lAR-boqzxy9o
+      - key: SPREADSHEET_URL
+        value: https://docs.google.com/spreadsheets/d/129v_Lw-mBELjpjtVE0HT_DOgzJTid4_lAR-boqzxy9o/edit?usp=sharing
+      - key: APPS_SCRIPT_URL
+        value: https://script.google.com/macros/s/AKfycbxdzPmmtbYuRibTZb3XaO0-okVOSVph7JsGcgPOzDb0wSkydHoSt52Hl38VZBI8QBFa/exec
+      - key: GEMINI_API_KEY
+        sync: false

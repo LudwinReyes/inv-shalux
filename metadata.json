@@ -1,0 +1,1 @@
+{"name":"Inventario Pro (Google Sheets)","description":"Sistema de gestión de inventarios con sincronización en tiempo real usando Google Sheets como base de datos.","requestFramePermissions":["camera"],"majorCapabilities":["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]}

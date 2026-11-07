@@ -1,0 +1,22 @@
+node_modules/
+build/
+dist/
+coverage/
+.DS_Store
+*.log
+.env*
+!.env.example
+
+# Base de datos local de usuarios y secretos
+data/
+users.json
+service-account.json
+
+# Archivos de prueba temporales
+test-*
+
+# IDE / Herramientas
+.vscode/
+.antigravity/
+.agents/
+.aistudio/
