@@ -2,9 +2,7 @@ import "dotenv/config";
 import express from "express";
 import path from "path";
 import fs from "fs";
-import { createServer as createViteServer } from "vite";
 import { google } from "googleapis";
-import PQueue from "p-queue";
 import { GoogleGenAI } from "@google/genai";
 import * as XLSX from "xlsx";
 import crypto from "node:crypto";
@@ -47,11 +45,21 @@ app.use((req, res, next) => {
   next();
 });
 
-// Queues per spreadsheet ID
-const sheetQueues = new Map<string, PQueue>();
-function getQueue(spreadsheetId: string) {
+// Pure TypeScript Sequential Queue (Zero external ESM dependencies)
+class AsyncQueue {
+  private lastPromise: Promise<any> = Promise.resolve();
+
+  add<T>(fn: () => Promise<T>): Promise<T> {
+    const next = this.lastPromise.then(fn, fn);
+    this.lastPromise = next;
+    return next;
+  }
+}
+
+const sheetQueues = new Map<string, AsyncQueue>();
+function getQueue(spreadsheetId: string): AsyncQueue {
   if (!sheetQueues.has(spreadsheetId)) {
-    sheetQueues.set(spreadsheetId, new PQueue({ concurrency: 1 }));
+    sheetQueues.set(spreadsheetId, new AsyncQueue());
   }
   return sheetQueues.get(spreadsheetId)!;
 }
@@ -669,14 +677,25 @@ app.get("/api/barcode", async (req, res) => {
 // -----------------------------------------------------------------------------
 
 async function startServer() {
-  if (process.env.NODE_ENV !== "production") {
-    const vite = await createViteServer({
-      server: { middlewareMode: true },
-      appType: "spa",
-    });
-    app.use(vite.middlewares);
+  const distPath = path.join(process.cwd(), "dist");
+  const hasDist = fs.existsSync(distPath) && fs.existsSync(path.join(distPath, "index.html"));
+
+  if (!hasDist && process.env.NODE_ENV !== "production") {
+    try {
+      const { createServer: createViteServer } = await import("vite");
+      const vite = await createViteServer({
+        server: { middlewareMode: true },
+        appType: "spa",
+      });
+      app.use(vite.middlewares);
+    } catch (e) {
+      console.warn("Vite no disponible, sirviendo archivos estáticos:", e);
+      app.use(express.static(distPath));
+      app.get("*", (req, res) => {
+        res.sendFile(path.join(distPath, "index.html"));
+      });
+    }
   } else {
-    const distPath = path.join(process.cwd(), "dist");
     app.use(express.static(distPath));
     app.get("*", (req, res) => {
       res.sendFile(path.join(distPath, "index.html"));
@@ -684,7 +703,7 @@ async function startServer() {
   }
 
   app.listen(PORT, "0.0.0.0", () => {
-    console.log(`Inventario Pro Server running on http://localhost:${PORT}`);
+    console.log(`Inventario Pro Server running on http://0.0.0.0:${PORT}`);
   });
 }
 

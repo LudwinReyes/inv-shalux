@@ -257,24 +257,19 @@ export default function InventoryTable({ spreadsheetId, onResetSpreadsheet }: { 
     <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
       {error && (
         <div className="p-4 bg-red-50 border-b border-red-100 text-red-600 text-sm font-medium flex flex-col sm:flex-row justify-between items-center gap-4">
-          <div className="flex flex-col gap-1">
+          <div className="flex flex-col gap-1 text-left">
             <span>{error}</span>
             <span className="text-xs text-gray-500 font-normal">
-              Si acabas de ingresar o si tu sesión expiró (dura 1 hora), haz clic en el botón de la derecha para reconectar con Google.
+              Puedes hacer clic en Reintentar o verificar la conexión con la hoja en el botón superior.
             </span>
           </div>
           <div className="flex gap-2 shrink-0">
-            {(error.toLowerCase().includes('token') || error.toLowerCase().includes('credential') || error.toLowerCase().includes('auth') || error.toLowerCase().includes('sesión') || error.toLowerCase().includes('permis') || error.toLowerCase().includes('permission') || error.toLowerCase().includes('unauthorized') || error.toLowerCase().includes('conectar')) && (
-              <button 
-                onClick={() => {
-                  logoutUser();
-                  window.location.reload();
-                }}
-                className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 whitespace-nowrap text-xs font-semibold"
-              >
-                Cerrar Sesión y Reconectar
-              </button>
-            )}
+            <button 
+              onClick={() => loadInventoryData()}
+              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 whitespace-nowrap text-xs font-semibold cursor-pointer"
+            >
+              Reintentar
+            </button>
             {error.includes('nueva pestaña') && (
               <button 
                 onClick={() => window.open(window.location.href, '_blank')}

@@ -13,31 +13,75 @@ const getHeaders = () => {
 };
 
 export const fetchInventory = async (spreadsheetId: string): Promise<any[]> => {
-  const response = await fetch(`/api/inventory?spreadsheetId=${encodeURIComponent(spreadsheetId)}`, {
-    headers: getHeaders()
-  });
+  // 1. Try fetching via Backend API
+  try {
+    const response = await fetch(`/api/inventory?spreadsheetId=${encodeURIComponent(spreadsheetId)}`, {
+      headers: getHeaders()
+    });
 
-  if (!response.ok) {
-    const error = await response.json().catch(() => ({}));
-    throw new Error(error.error || "Error al obtener inventario");
+    if (response.ok) {
+      const data = await response.json();
+      if (Array.isArray(data) && data.length > 0) {
+        return data;
+      }
+    }
+  } catch (err) {
+    console.warn("Backend /api/inventory call failed, attempting direct live sheet fetch:", err);
   }
 
-  const data = await response.json();
-  return Array.isArray(data) ? data : [];
+  // 2. High-resilience direct Google Sheets GViz fallback (works even during server cold-starts)
+  try {
+    const gvizRes = await fetch(`https://docs.google.com/spreadsheets/d/${spreadsheetId}/gviz/tq?tqx=out:csv`);
+    if (gvizRes.ok) {
+      const csv = await gvizRes.text();
+      const XLSX = await import('xlsx');
+      const wb = XLSX.read(csv, { type: 'string', raw: true });
+      const sheet = wb.Sheets[wb.SheetNames[0]];
+      const rows: any[][] = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' });
+      if (rows && rows.length > 0) {
+        return rows;
+      }
+    }
+  } catch (gvizErr) {
+    console.error("Direct sheet fetch fallback failed:", gvizErr);
+  }
+
+  throw new Error("No se pudo cargar el inventario. Verifica tu conexión o recarga la página.");
 };
 
 export const fetchHistory = async (spreadsheetId: string): Promise<any[]> => {
-  const response = await fetch(`/api/history?spreadsheetId=${encodeURIComponent(spreadsheetId)}`, {
-    headers: getHeaders()
-  });
+  // 1. Try fetching via Backend API
+  try {
+    const response = await fetch(`/api/history?spreadsheetId=${encodeURIComponent(spreadsheetId)}`, {
+      headers: getHeaders()
+    });
 
-  if (!response.ok) {
-    const error = await response.json().catch(() => ({}));
-    throw new Error(error.error || "Error al obtener historial");
+    if (response.ok) {
+      const data = await response.json();
+      if (Array.isArray(data)) {
+        return data;
+      }
+    }
+  } catch (err) {
+    console.warn("Backend /api/history call failed, attempting direct live sheet fetch:", err);
   }
 
-  const data = await response.json();
-  return Array.isArray(data) ? data : [];
+  // 2. High-resilience direct Google Sheets GViz fallback
+  try {
+    const gvizRes = await fetch(`https://docs.google.com/spreadsheets/d/${spreadsheetId}/gviz/tq?sheet=Historial_Movimientos&tqx=out:csv`);
+    if (gvizRes.ok) {
+      const csv = await gvizRes.text();
+      const XLSX = await import('xlsx');
+      const wb = XLSX.read(csv, { type: 'string', raw: true });
+      const sheet = wb.Sheets[wb.SheetNames[0]];
+      const rows: any[][] = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' });
+      return rows.length > 1 ? rows.slice(1) : [];
+    }
+  } catch (gvizErr) {
+    console.error("Direct history fetch fallback failed:", gvizErr);
+  }
+
+  return [];
 };
 
 export const addProduct = async (spreadsheetId: string, product: any, rowIndex?: number): Promise<any> => {
